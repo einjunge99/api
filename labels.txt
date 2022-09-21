@@ -1,2 +1,6 @@
-0 Class 1
-1 Class 2
+0 Lunes
+1 Martes
+2 Miércoles
+3 Viernes
+4 Sábado
+5 Domingo
