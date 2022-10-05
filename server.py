@@ -14,13 +14,15 @@ app = FastAPI()
 def hello_world():
     return "Hello World"
 
+# TODO: Add corresponding response codes
+
 
 @app.post("/api/predict")
 def predict(file: bytes = File(...), expected_label: str = Form(...)):
     labels = gen_labels()
 
     if expected_label not in labels.values():
-        return {"error": "Invalid label"}
+        return {"correct": False, "error": "Invalid label"}
 
     model = load_model('keras_model.h5')
 
@@ -40,16 +42,19 @@ def predict(file: bytes = File(...), expected_label: str = Form(...)):
 
     predicted_label = labels[str(result)]
 
+    print(f"Predicted: {predicted_label}, Expected: {expected_label}")
+
     if predicted_label == expected_label:
-        return {"correct": True, "confidence": prediction[0][result]*100}
+        confidence = prediction[0][result]*100
+        if confidence > 50:
+            return {"correct": True, "confidence": confidence}
+        return {"correct": False, "confidence": confidence}
 
     index = list(labels.values()).index(expected_label)
-
     confidence = prediction[0][index]*100
 
-    if confidence > 0.5:
+    if confidence > 50:
         return {"correct": True, "confidence": confidence}
-
     return {"correct": False, "confidence": confidence}
 
 
