@@ -1,4 +1,5 @@
-from fastapi import FastAPI
+import random
+from fastapi import FastAPI, Response, status
 from fastapi import File, Form
 from PIL import Image, ImageOps
 from io import BytesIO
@@ -6,6 +7,11 @@ import uvicorn
 from keras.models import load_model
 import numpy as np
 from utils.labels import gen_labels
+import firebase_admin
+from firebase_admin import credentials, firestore
+
+cred = credentials.Certificate("./serviceAccountKey.json")
+firebase_admin.initialize_app(cred)
 
 app = FastAPI()
 
@@ -13,9 +19,6 @@ app = FastAPI()
 @app.get("/")
 def hello_world():
     return "Hello World"
-
-# TODO: Add corresponding response codes
-
 
 @app.post("/api/predict")
 def predict(file: bytes = File(...), expected_label: str = Form(...)):
@@ -57,6 +60,55 @@ def predict(file: bytes = File(...), expected_label: str = Form(...)):
         return {"correct": True, "confidence": confidence}
     return {"correct": False, "confidence": confidence}
 
+@app.get("/api/exercises/{lecture_id}")
+def exercises(lecture_id):
+    db = firestore.client()
+    docs = [d for d in db.collection(u'exercises').where('lectureId','==',lecture_id).stream()]
+    
+    exercices = []
+    
+    if len(docs) == 0:
+        return exercices
+    
+    for doc in docs:
+        exercices.append(doc.to_dict())
+    
+    random.shuffle(exercices)
+    
+    return exercices[:5]
 
+@app.get("/api/lectures/{user_id}")
+def get_lectures(user_id):
+    db = firestore.client()
+    user_ref = db.collection('users').document(user_id)
+    user = user_ref.get()
+    
+    completed_lectures = []
+    
+    if user.exists:
+        completed_lectures = user.to_dict()['completed_lectures']
+    
+    docs = db.collection('lectures').stream()
+    
+    lectures = []
+
+    for doc in docs:
+        lecture = doc.to_dict()
+        lecture['isCompleted'] = doc.id in completed_lectures
+        lectures.append(lecture)
+    
+    return lectures
+
+@app.patch("/api/user/{user_id}/{lecture_id}")
+def add_completed_lecture(user_id,lecture_id,response: Response):
+    db = firestore.client()
+    user_ref = db.collection('users').document(user_id)
+    
+    if not user_ref.get().exists:
+        response.status_code = status.HTTP_404_NOT_FOUND
+        return {"error": "User not found"}
+        
+    user_ref.update({'completedLectures': firestore.ArrayUnion([lecture_id])})
+    
 if __name__ == "__main__":
     uvicorn.run(app, port=8080, host="0.0.0.0")
