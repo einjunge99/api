@@ -20,14 +20,15 @@ app = FastAPI()
 def hello_world():
     return "Hello World"
 
-@app.post("/api/predict")
-def predict(file: bytes = File(...), expected_label: str = Form(...)):
-    labels = gen_labels()
+@app.post("/api/predict/{lecture_id}")
+def predict(lecture_id, file: bytes = File(...), expected_label: str = Form(...)):
+    #TODO: Add lecture_id validation
+    labels = gen_labels(lecture_id)
 
     if expected_label not in labels.values():
         return {"correct": False, "error": "Invalid label"}
 
-    model = load_model('keras_model.h5')
+    model = load_model(f'./{lecture_id}/keras_model.h5')
 
     data = np.ndarray(shape=(1, 224, 224, 3), dtype=np.float32)
 

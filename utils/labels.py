@@ -1,6 +1,7 @@
-def gen_labels():
+
+def gen_labels(lecture_id):
     labels = {}
-    with open("labels.txt", "r") as label:
+    with open(f'./{lecture_id}/labels.txt', "r") as label:
         text = label.read()
         lines = text.split("\n")
         for line in lines[0:-1]:
