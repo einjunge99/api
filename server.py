@@ -34,7 +34,7 @@ def predict(lecture_id, file: bytes = File(...), expected_label: str = Form(...)
 
     image = Image.open(BytesIO(file)).convert('RGB')
     size = (224, 224)
-    image = ImageOps.fit(image, size, Image.ANTIALIAS)
+    image = ImageOps.fit(image, size, Image.LANCZOS)
 
     image_array = np.asarray(image)
     normalized_image_array = (image_array.astype(np.float32) / 127.0) - 1
@@ -87,7 +87,7 @@ def get_lectures(user_id):
     completed_lectures = []
     
     if user.exists:
-        completed_lectures = user.to_dict()['completed_lectures']
+        completed_lectures = user.to_dict().get('completedLectures', [])
     
     docs = db.collection('lectures').stream()
     
@@ -96,20 +96,33 @@ def get_lectures(user_id):
     for doc in docs:
         lecture = doc.to_dict()
         lecture['isCompleted'] = doc.id in completed_lectures
+        lecture['uid'] = doc.id
         lectures.append(lecture)
     
-    return lectures
+    return sorted(lectures, key=lambda d: d['order']) 
 
 @app.patch("/api/user/{user_id}/{lecture_id}")
-def add_completed_lecture(user_id,lecture_id,response: Response):
+def add_completed_lecture(user_id,lecture_id):
     db = firestore.client()
     user_ref = db.collection('users').document(user_id)
     
     if not user_ref.get().exists:
-        response.status_code = status.HTTP_404_NOT_FOUND
         return {"error": "User not found"}
         
     user_ref.update({'completedLectures': firestore.ArrayUnion([lecture_id])})
+    
+    return {"success": True}
+
+@app.get("/api/user/{user_id}")
+def get_user_info(user_id):
+    db = firestore.client()
+    user_ref = db.collection('users').document(user_id)
+    user = user_ref.get()
+    
+    if not user.exists:
+        return {"error": "User not found"}
+    
+    return user.to_dict()
     
 if __name__ == "__main__":
     uvicorn.run(app, port=8080, host="0.0.0.0")
