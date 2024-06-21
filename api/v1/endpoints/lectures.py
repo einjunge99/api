@@ -9,14 +9,15 @@ from db.firestore import (
     create_label,
 )
 from utils.labels_to_dict import labels_to_dict
-from utils.get_exercises import get_exercises
+from keras.utils import get_file
+from utils.get_exercices import get_exercices
 from keras.models import load_model
 import numpy as np
 from PIL import Image, ImageOps
 from io import BytesIO
 from typing import Optional
 import json
-from models.label import Label
+from models.label import Label, BaseLabel
 from pydantic import ValidationError
 
 router = APIRouter()
@@ -40,7 +41,7 @@ async def post_lecture(
 ):
     labels_list = json.loads(labels)
     try:
-        [Label(**item) for item in labels_list]
+        [BaseLabel(**item) for item in labels_list]
     except ValidationError as e:
         return JSONResponse(
             status_code=400,
@@ -111,7 +112,9 @@ def predict(lecture_id, file: bytes = File(...), expected_label: str = Form(...)
             content={"message": "Label not found"},
         )
 
-    model = load_model(lecture["modelUrl"])
+    model_path = get_file(lecture["id"], lecture["modelUrl"])
+
+    model = load_model(model_path)
 
     data = np.ndarray(shape=(1, 224, 224, 3), dtype=np.float32)
 
@@ -127,29 +130,27 @@ def predict(lecture_id, file: bytes = File(...), expected_label: str = Form(...)
 
     result = np.argmax(prediction[0])
 
-    predicted_label = labels[str(result)]
-
-    print(f"Predicted: {predicted_label}, Expected: {expected_label}")
+    predicted_label = labels_dict[result]
 
     if predicted_label == expected_label:
         confidence = prediction[0][result] * 100
+        is_correct = bool(confidence > 50)
         return JSONResponse(
             status_code=status.HTTP_200_OK,
-            content={"correct": confidence > 50, "confidence": confidence},
+            content={"correct": is_correct, "confidence": confidence},
         )
 
-    # Dont really know what to return...
+    index = list(labels_dict.values()).index(expected_label)
+    confidence = prediction[0][index] * 100
 
-    # index = list(labels.values()).index(expected_label)
-    # confidence = prediction[0][index] * 100
-
-    # if confidence > 50:
-    #     return {"correct": True, "confidence": confidence}
-    # return {"correct": False, "confidence": confidence}
+    return JSONResponse(
+        status_code=status.HTTP_200_OK,
+        content={"correct": False, "confidence": confidence},
+    )
 
 
-@router.get("/{lecture_id}/exercises")
-def exercises(lecture_id):
+@router.get("/{lecture_id}/exercices")
+def exercices(lecture_id):
     lecture = get_lecture_by_id(lecture_id)
 
     if lecture is None:
@@ -166,6 +167,6 @@ def exercises(lecture_id):
             content={"message": "Labels not found to given lecture"},
         )
 
-    exercises = get_exercises(lecture, labels)
+    exercices = get_exercices(lecture, labels)
 
-    return JSONResponse(status_code=200, content=exercises)
+    return JSONResponse(status_code=200, content=exercices)

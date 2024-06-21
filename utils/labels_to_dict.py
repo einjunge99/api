@@ -6,6 +6,6 @@ def labels_to_dict(labels: List[Dict[str, str]]) -> Dict[str, str]:
     for label in labels:
         value = label.get("value")
         label_value = label.get("label")
-        if value and label_value:
+        if value != None and label_value:
             label_dict[value] = label_value
     return label_dict

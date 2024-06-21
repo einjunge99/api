@@ -1,7 +1,7 @@
 import random
 
 
-def get_exercises(lecture, labels):
+def get_exercices(lecture, labels):
     unique_labels = []
     seen_labels = set()
     for label in labels:
@@ -9,22 +9,22 @@ def get_exercises(lecture, labels):
             unique_labels.append(label)
             seen_labels.add(label["label"])
 
-    exercises = []
+    exercices = []
 
     model_available = "modelUrl" in lecture and lecture["modelUrl"]
 
     if model_available:
         for label in unique_labels:
             exercise = {
-                "key": label["label"].lower(),
+                "key": label["label"],
                 "lectureId": lecture["id"],
                 "question": label["label"],
                 "type": "recognition",
                 "videoId": label["url"],
             }
-            exercises.append(exercise)
+            exercices.append(exercise)
 
-    # Generate multiple choice exercises
+    # Generate multiple choice exercices
     for label in unique_labels:
         choices = [label["label"]] + random.sample(
             [lbl["label"] for lbl in unique_labels if lbl["label"] != label["label"]],
@@ -33,15 +33,15 @@ def get_exercises(lecture, labels):
         random.shuffle(choices)
         exercise = {
             "answer": label["label"],
-            "key": label["label"].lower(),
+            "key": label["label"],
             "lectureId": lecture["id"],
             "type": "multiple",
             "options": choices,
             "videoId": label["url"],
         }
         random.shuffle(exercise["options"])
-        exercises.append(exercise)
+        exercices.append(exercise)
 
-    random.shuffle(exercises)
+    random.shuffle(exercices)
 
-    return exercises
+    return exercices

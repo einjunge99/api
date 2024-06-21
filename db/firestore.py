@@ -1,25 +1,28 @@
 from firebase_admin import firestore, storage
 from fastapi import UploadFile
-from models.lecture import BaseLecture, Lecture
-from models.label import BaseLabel, Label
+from models.lecture import Lecture
+from models.label import Label
 
 
-def create_label(label: BaseLabel) -> Label:
+def create_label(label) -> Label:
     db = firestore.client()
-    label_ref = db.collection("lectures")
-    label_ref = label_ref.add(label.dict())
+    label_ref = db.collection("labels")
+    label_ref = label_ref.add(label)
     label_with_id = Label(
-        id == label_ref[1].id, label=label.label, url=label.url, value=label.value
+        id=label_ref[1].id,
+        label=label["label"],
+        url=label["url"],
+        value=label.get("value", None),
     )
     return label_with_id
 
 
-def create_lecture(lecture: BaseLecture) -> Lecture:
+def create_lecture(lecture) -> Lecture:
     db = firestore.client()
     lectures_ref = db.collection("lectures")
-    lectures_ref = lectures_ref.add(lecture.dict())
+    lectures_ref = lectures_ref.add(lecture)
     lecture_with_id = Lecture(
-        id == lectures_ref[1].id, title=lecture.id, modelUrl=lecture.modelUrl
+        id=lectures_ref[1].id, title=lecture["title"], modelUrl=lecture["modelUrl"]
     )
     return lecture_with_id
 
