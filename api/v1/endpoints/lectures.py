@@ -38,6 +38,7 @@ async def post_lecture(
     title: str = Form(...),
     labels: str = Form(...),
     model: Optional[UploadFile] = File(None),
+    icon: UploadFile = File(None),
 ):
     labels_list = json.loads(labels)
     try:
@@ -58,8 +59,17 @@ async def post_lecture(
                 content={"message": "Failed to upload file", "error": str(e)},
             )
 
+    icon_url = None
     try:
-        lecture = {"title": title}
+        icon_url = await upload_file_to_storage(icon)
+    except Exception as e:
+        return JSONResponse(
+            status_code=500,
+            content={"message": "Failed to upload file", "error": str(e)},
+        )
+
+    try:
+        lecture = {"title": title, "iconUrl": icon_url}
         if model_url:
             lecture["modelUrl"] = model_url
         lecture = create_lecture(lecture)

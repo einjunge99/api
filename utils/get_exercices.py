@@ -18,9 +18,9 @@ def get_exercices(lecture, labels):
             exercise = {
                 "key": label["label"],
                 "lectureId": lecture["id"],
-                "question": label["label"],
                 "type": "recognition",
                 "videoId": label["url"],
+                "question": label["label"],
             }
             exercices.append(exercise)
 
@@ -32,12 +32,12 @@ def get_exercices(lecture, labels):
         )
         random.shuffle(choices)
         exercise = {
-            "answer": label["label"],
             "key": label["label"],
             "lectureId": lecture["id"],
             "type": "multiple",
-            "options": choices,
             "videoId": label["url"],
+            "answer": label["label"],
+            "options": choices,
         }
         random.shuffle(exercise["options"])
         exercices.append(exercise)
