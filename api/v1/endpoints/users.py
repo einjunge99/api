@@ -57,16 +57,13 @@ def add_completed_lecture(
 
 @router.get("/{user_id}/lectures")
 def get_user_lectures(user_id):
+    lectures = get_lectures()
     user = get_user_by_id(user_id)
 
-    if user is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
-        )
+    completed_lectures = []
 
-    completed_lectures = user.get("completedLectures", [])
-
-    lectures = get_lectures()
+    if user is not None:
+        completed_lectures = user.get("completedLectures", [])
 
     updated_lectures = []
 
