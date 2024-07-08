@@ -69,7 +69,10 @@ def get_user_lectures(user_id):
 
     for lecture in lectures:
         updated_lecture = lecture
-        updated_lecture["isCompleted"] = lecture["id"] in completed_lectures
+        updated_lecture["isCompleted"] = any(
+            completed_lecture["lecture_id"] == lecture["id"]
+            for completed_lecture in completed_lectures
+        )
         updated_lectures.append(updated_lecture)
 
     return JSONResponse(status_code=status.HTTP_200_OK, content=updated_lectures)

@@ -1,3 +1,4 @@
+from utils.get_youtube_video_id import get_youtube_video_id
 import random
 
 
@@ -15,11 +16,13 @@ def get_exercices(lecture, labels):
 
     if model_available:
         for label in unique_labels:
+            if "value" not in label:
+                continue
             exercise = {
                 "key": label["label"],
                 "lectureId": lecture["id"],
                 "type": "recognition",
-                "videoId": label["url"],
+                "videoId": get_youtube_video_id(label["url"]),
                 "question": label["label"],
             }
             exercices.append(exercise)
@@ -35,7 +38,7 @@ def get_exercices(lecture, labels):
             "key": label["label"],
             "lectureId": lecture["id"],
             "type": "multiple",
-            "videoId": label["url"],
+            "videoId": get_youtube_video_id(label["url"]),
             "answer": label["label"],
             "options": choices,
         }

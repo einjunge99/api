@@ -2,12 +2,10 @@ from firebase_admin import firestore, storage
 from fastapi import UploadFile
 from models.lecture import Lecture
 from models.label import Label
-from utils.get_youtube_video_id import get_youtube_video_id
 
 
 def create_label(label) -> Label:
     db = firestore.client()
-    label["url"] = get_youtube_video_id(label["url"])
     label_ref = db.collection("labels")
     label_ref = label_ref.add(label)
     label_with_id = Label(
