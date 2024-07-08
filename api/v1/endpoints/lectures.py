@@ -152,10 +152,11 @@ def predict(lecture_id, file: bytes = File(...), expected_label: str = Form(...)
 
     index = list(labels_dict.values()).index(expected_label)
     confidence = prediction[0][index] * 100
+    is_correct = bool(confidence > 50)
 
     return JSONResponse(
         status_code=status.HTTP_200_OK,
-        content={"correct": False, "confidence": confidence},
+        content={"correct": is_correct, "confidence": confidence},
     )
 
 
