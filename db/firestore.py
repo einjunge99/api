@@ -2,6 +2,7 @@ from firebase_admin import firestore, storage
 from fastapi import UploadFile
 from models.lecture import Lecture
 from models.label import Label
+import uuid
 
 
 def create_label(label) -> Label:
@@ -20,21 +21,39 @@ def create_label(label) -> Label:
 def create_lecture(lecture) -> Lecture:
     db = firestore.client()
     lectures_ref = db.collection("lectures")
+    lecture["createdAt"] = firestore.SERVER_TIMESTAMP
     lectures_ref = lectures_ref.add(lecture)
     lecture_with_id = Lecture(
-        id=lectures_ref[1].id, title=lecture["title"], modelUrl=lecture["modelUrl"]
+        id=lectures_ref[1].id,
+        title=lecture["title"],
     )
     return lecture_with_id
 
 
+def update_lecture(lecture_id, updated_fields):
+    db = firestore.client()
+    lecture_ref = db.collection("lectures").document(lecture_id)
+    lecture_ref.update(updated_fields)
+
+    updated_lecture = lecture_ref.get().to_dict()
+    return updated_lecture
+
+
+def delete_lecture(lecture_id):
+    db = firestore.client()
+    lecture_ref = db.collection("lectures").document(lecture_id)
+    lecture_ref.delete()
+
+
 def get_lectures():
     db = firestore.client()
-    lectures_ref = db.collection("lectures")
+    lectures_ref = db.collection("lectures").order_by("createdAt")
     docs = lectures_ref.stream()
     lectures = []
 
     for doc in docs:
         lecture_data = doc.to_dict()
+        lecture_data.pop("createdAt")  # TODO: serialize dates
         lecture_data["id"] = doc.id
         lectures.append(lecture_data)
 
@@ -78,12 +97,15 @@ def get_labels_by_lecture_id(lecture_id: str):
     return labels
 
 
-async def upload_file_to_storage(file: UploadFile):
+async def upload_file_to_storage(file: UploadFile, prefix=None):
+    if prefix is None:
+        prefix = uuid.uuid4()
     try:
         file_contents = await file.read()
 
         bucket = storage.bucket()
-        blob = bucket.blob(file.filename)
+        unique_filename = f"{str(prefix)}_{file.filename}"
+        blob = bucket.blob(unique_filename)
         blob.upload_from_string(file_contents, content_type=file.content_type)
 
         blob.make_public()

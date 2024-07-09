@@ -7,6 +7,8 @@ from db.firestore import (
     upload_file_to_storage,
     create_lecture,
     create_label,
+    update_lecture,
+    delete_lecture,
 )
 from utils.labels_to_dict import labels_to_dict
 from keras.utils import get_file
@@ -49,51 +51,41 @@ async def post_lecture(
             content={"message": "Invalid labels data format", "error": str(e.errors())},
         )
 
-    model_url = None
-    if model:
-        try:
-            model_url = await upload_file_to_storage(model)
-        except Exception as e:
-            return JSONResponse(
-                status_code=500,
-                content={"message": "Failed to upload file", "error": str(e)},
-            )
+    lecture = {"title": title}
+    lecture = create_lecture(lecture)
 
+    model_url = None
     icon_url = None
+
     try:
+        if model:
+            model_url = await upload_file_to_storage(model)
+
         icon_url = await upload_file_to_storage(icon)
     except Exception as e:
+        delete_lecture(lecture.id)
         return JSONResponse(
             status_code=500,
-            content={"message": "Failed to upload file", "error": str(e)},
+            content={"message": "Failed to upload files", "error": str(e)},
         )
 
-    try:
-        lecture = {"title": title, "iconUrl": icon_url}
-        if model_url:
-            lecture["modelUrl"] = model_url
-        lecture = create_lecture(lecture)
+    update_lecture(lecture.id, {"modelUrl": model_url, "iconUrl": icon_url})
 
-        for label in labels_list:
-            label["lectureId"] = lecture.id
-            create_label(label)
+    for label in labels_list:
+        label["lectureId"] = lecture.id
+        create_label(label)
 
-        response_data = {
-            "id": lecture.id,
-            "title": lecture.title,
-            "labels": labels_list,
-        }
+    response_data = {
+        "id": lecture.id,
+        "title": lecture.title,
+        "labels": labels_list,
+        "iconUrl": icon_url,
+    }
 
-        if model_url:
-            response_data["modelUrl"] = model_url
+    if model_url:
+        response_data["modelUrl"] = model_url
 
-        return JSONResponse(status_code=200, content=response_data)
-
-    except Exception as e:
-        return JSONResponse(
-            status_code=500,
-            content={"message": "Failed to process request", "error": str(e)},
-        )
+    return JSONResponse(status_code=200, content=response_data)
 
 
 @router.post("/{lecture_id}/predict")

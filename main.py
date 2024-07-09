@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-from api.v1.endpoints import lectures, users
+from api.v1.endpoints import lectures, users, files
 from middlewares.cors import add_cors_middleware
 from core.firebase import initialize_firebase
 
@@ -10,6 +10,7 @@ initialize_firebase()
 
 add_cors_middleware(app)
 
+app.include_router(files.router, prefix="/api/v1/files", tags=["files"])
 app.include_router(users.router, prefix="/api/v1/users", tags=["users"])
 app.include_router(lectures.router, prefix="/api/v1/lectures", tags=["lectures"])
 
